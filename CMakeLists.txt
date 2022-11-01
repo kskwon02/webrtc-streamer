@@ -49,7 +49,7 @@ MESSAGE("PulseAudio_FOUND = ${PulseAudio_FOUND}")
 # webrtc build
 if (NOT EXISTS ${WEBRTCROOT}/src/out/${CMAKE_BUILD_TYPE}/args.gn)
   set (WEBRTCARGS rtc_include_tests=false\nrtc_enable_protobuf=false\nrtc_build_examples=false\nrtc_build_tools=false\ntreat_warnings_as_errors=false\nrtc_enable_libevent=false\nrtc_build_libevent=false\n)
-  set (WEBRTCARGS use_custom_libcxx=false\n${WEBRTCARGS})
+  set (WEBRTCARGS use_custom_libcxx=true\n${WEBRTCARGS})
   # debug/release
   if(CMAKE_BUILD_TYPE STREQUAL "Release")
     set (WEBRTCARGS is_debug=false\n${WEBRTCARGS})
@@ -119,14 +119,20 @@ if (NOT EXISTS ${WEBRTCOBJS}/${CMAKE_STATIC_LIBRARY_PREFIX}webrtc${CMAKE_STATIC_
   endif()
   EXECUTE_PROCESS(WORKING_DIRECTORY ${WEBRTCROOT}/src/out/${CMAKE_BUILD_TYPE} COMMAND ${SHELLCOMMAND} gn gen .)
   
-  SET(NINJA_TARGET webrtc rtc_json jsoncpp builtin_video_decoder_factory builtin_video_encoder_factory peerconnection p2p_server_utils task_queue default_task_queue_factory)
+  SET(NINJA_TARGET webrtc rtc_json jsoncpp builtin_video_decoder_factory builtin_video_encoder_factory peerconnection p2p_server_utils task_queue default_task_queue_factory libc++)
   EXECUTE_PROCESS(WORKING_DIRECTORY ${WEBRTCROOT}/src/out/${CMAKE_BUILD_TYPE} COMMAND ninja ${NINJA_TARGET})
 endif() 
 
 
+#libc++
+add_compile_options(-nostdinc++)
+include_directories(SYSTEM ${WEBRTCROOT}/src/buildtools/third_party/libc++ ${WEBRTCROOT}/src/buildtools/third_party/libc++/trunk/include ${WEBRTCROOT}/src/buildtools/third_party/libc++abi/trunk/include)
+FILE(GLOB_RECURSE WEBLIBCXX ${WEBRTCOBJS}/buildtools/third_party/libc++/libc++/*${CMAKE_C_OUTPUT_EXTENSION} ${WEBRTCOBJS}/buildtools/third_party/libc++abi/libc++abi/*${CMAKE_C_OUTPUT_EXTENSION})
+
+#webrtc missing objects
 FILE(GLOB_RECURSE WEBRTJSONCPPCOBJS ${WEBRTCOBJS}/third_party/jsoncpp/jsoncpp/*${CMAKE_C_OUTPUT_EXTENSION})
 FILE(GLOB_RECURSE WEBRTP2POBJ ${WEBRTCOBJS}/p2p/p2p_server_utils/*${CMAKE_C_OUTPUT_EXTENSION})
-SET (WEBRTCEXTRAOBJS ${WEBRTJSONCPPCOBJS} ${WEBRTP2POBJ} ${WEBRTTASK})	
+SET (WEBRTCEXTRAOBJS ${WEBRTJSONCPPCOBJS} ${WEBRTP2POBJ} ${WEBRTTASK} ${WEBLIBCXX})	
 
 # project target
 FILE(GLOB SOURCE src/*.cpp)
