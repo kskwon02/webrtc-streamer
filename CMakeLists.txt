@@ -82,6 +82,8 @@ if (NOT EXISTS ${WEBRTCROOT}/src/out/${CMAKE_BUILD_TYPE}/args.gn)
     if (NOT ALSA_FOUND)
       set (WEBRTCARGS rtc_include_internal_audio_device=false\n${WEBRTCARGS})
     endif()
+  else()
+      set (WEBRTCARGS use_rtti=true\nuse_lld=false\n${WEBRTCARGS})
   endif()
 
   # compilation mode depending on target
