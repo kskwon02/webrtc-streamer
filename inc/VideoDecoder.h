@@ -201,6 +201,9 @@ class VideoDecoder : public rtc::VideoSourceInterface<webrtc::VideoFrame>, publi
             } else if (format.fourcc == FOURCC_VP9) {
                 m_decoder=m_factory->CreateVideoDecoder(webrtc::SdpVideoFormat(cricket::kVp9CodecName));
                 settings.set_codec_type(webrtc::VideoCodecType::kVideoCodecVP9);	                
+            } else if (format.fourcc == FOURCC_H265) {
+                m_decoder=m_factory->CreateVideoDecoder(webrtc::SdpVideoFormat(cricket::kH265CodecName));
+                settings.set_codec_type(webrtc::VideoCodecType::kVideoCodecH265);	                
             }
             if (m_decoder.get() != NULL) {
                 m_decoder->Configure(settings);
