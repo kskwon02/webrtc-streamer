@@ -15,6 +15,8 @@
 #include "api/video/i420_buffer.h"
 #include "modules/video_coding/include/video_error_codes.h"
 #include "modules/video_coding/h264_sprop_parameter_sets.h"
+#include "rtc_base/third_party/base64/base64.h"
+
 
 #include "VideoScaler.h"
 
@@ -23,6 +25,7 @@
    (static_cast<uint32_t>(c) << 16) | (static_cast<uint32_t>(d) << 24))
 
 const uint32_t FOURCC_VP9 = FOURCC('V','P','9', 0);
+const uint32_t FOURCC_H265 = FOURCC('H','2','6','5');
 #undef FOURCC
 
 class VideoDecoder : public rtc::VideoSourceInterface<webrtc::VideoFrame>, public webrtc::DecodedImageCallback {
@@ -58,22 +61,41 @@ class VideoDecoder : public rtc::VideoSourceInterface<webrtc::VideoFrame>, publi
         int width() { return m_scaler.width();  }
         int height() { return m_scaler.height();  }
 
+        static std::string getValueFromSdp(const char* sdp, const std::string & key) {
+            const char* sprop=strstr(sdp, key.c_str());
+            std::string result;
+            if (sprop)
+            {
+                std::string sdpstr(sprop+key.size());
+                size_t pos = sdpstr.find_first_of(" ;\r\n");
+                if (pos != std::string::npos)
+                {
+                    sdpstr.erase(pos);
+                    result = sdpstr;
+                }
+            }
+            return result;
+        }
+
+        static std::vector<uint8_t> decode(const std::string& base64) {
+            std::vector<uint8_t> frame;
+            std::vector<uint8_t> binary;
+            if (rtc::Base64::DecodeFromArray(base64.c_str(), base64.size(), rtc::Base64::DO_STRICT, &binary, nullptr)) {
+                frame.insert(frame.end(), H26X_marker, H26X_marker+sizeof(H26X_marker));
+                frame.insert(frame.end(), binary.begin(), binary.end());
+            }
+            return frame;
+        }
+
         std::vector< std::vector<uint8_t> > getInitFrames(const std::string & codec, const char* sdp) {
             std::vector< std::vector<uint8_t> > frames;
 
             if (codec == "H264") {
-                const char* pattern="sprop-parameter-sets=";
-                const char* sprop=strstr(sdp, pattern);
-                if (sprop)
+                std::string spropstr = getValueFromSdp(sdp, "sprop-parameter-sets=");
+                if (!spropstr.empty())
                 {
-                    std::string sdpstr(sprop+strlen(pattern));
-                    size_t pos = sdpstr.find_first_of(" ;\r\n");
-                    if (pos != std::string::npos)
-                    {
-                        sdpstr.erase(pos);
-                    }
                     webrtc::H264SpropParameterSets sprops;
-                    if (sprops.DecodeSprop(sdpstr))
+                    if (sprops.DecodeSprop(spropstr))
                     {
                         std::vector<uint8_t> sps;
                         sps.insert(sps.end(), H26X_marker, H26X_marker+sizeof(H26X_marker));
@@ -87,10 +109,23 @@ class VideoDecoder : public rtc::VideoSourceInterface<webrtc::VideoFrame>, publi
                     }
                     else
                     {
-                        RTC_LOG(LS_WARNING) << "Cannot decode SPS:" << sprop;
+                        RTC_LOG(LS_WARNING) << "Cannot decode SPS:" << spropstr;
                     }
                 }
-            }
+            } else if (codec == "H265") {
+                std::string vps = getValueFromSdp(sdp, "sprop-vps=");
+                if (!vps.empty()) {
+                    frames.push_back(decode(vps));
+                }
+                std::string sps = getValueFromSdp(sdp, "sprop-sps=");
+                if (!sps.empty()) {
+                    frames.push_back(decode(sps));
+                }
+                std::string pps = getValueFromSdp(sdp, "sprop-pps=");
+                if (!pps.empty()) {
+                    frames.push_back(decode(pps));
+                }
+            }                
 
             return frames;
         }

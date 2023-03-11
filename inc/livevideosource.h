@@ -32,11 +32,6 @@
 #include "common_video/h265/h265_common.h"
 #include "common_video/h265/h265_sps_parser.h"
 
-#define BUILD_FOURCC(a, b, c, d)                                \
-  ((static_cast<uint32_t>(a)) | (static_cast<uint32_t>(b) << 8) | \
-   (static_cast<uint32_t>(c) << 16) | (static_cast<uint32_t>(d) << 24))
-
-
 #include "api/video_codecs/video_decoder.h"
 
 #include "VideoDecoder.h"
@@ -133,7 +128,7 @@ public:
                     {
                         int fps = 25;
                         RTC_LOG(LS_INFO) << "LiveVideoSource:onData SPS set format " << sps->width << "x" << sps->height << " fps:" << fps;
-                        cricket::VideoFormat videoFormat(sps->width, sps->height, cricket::VideoFormat::FpsToInterval(fps), BUILD_FOURCC('H', '2', '6', '5'));
+                        cricket::VideoFormat videoFormat(sps->width, sps->height, cricket::VideoFormat::FpsToInterval(fps), FOURCC_H265);
                         m_decoder.postFormat(videoFormat);
                     }
                     m_cfg.insert(m_cfg.end(), buffer + index.start_offset, buffer + index.payload_size + index.payload_start_offset - index.start_offset);
