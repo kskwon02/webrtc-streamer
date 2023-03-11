@@ -25,8 +25,19 @@ jobs:
       run: |
           mkdir webrtc
           pushd webrtc
-          fetch --no-history --nohooks webrtc
-          sed -i -e "s|'src/resources'],|'src/resources'],'condition':'rtc_include_tests==true',|" src/DEPS 
+          echo << EOF
+            solutions = [
+              {
+                "managed": False,
+                "name": "src",
+                "url": "https://github.com/open-webrtc-toolkit/owt-client-native.git",
+                "custom_deps": {},
+                "deps_file": "DEPS",
+                "safesync_url": "",
+              },
+            ]
+            target_os = []
+          EOF
           gclient sync 
           popd
 

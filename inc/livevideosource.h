@@ -28,7 +28,15 @@
 
 #include "common_video/h264/h264_common.h"
 #include "common_video/h264/sps_parser.h"
-#include "modules/video_coding/h264_sprop_parameter_sets.h"
+//#include "modules/video_coding/h264_sprop_parameter_sets.h"
+
+#include "common_video/h265/h265_common.h"
+#include "common_video/h265/h265_sps_parser.h"
+
+#define BUILD_FOURCC(a, b, c, d)                                \
+  ((static_cast<uint32_t>(a)) | (static_cast<uint32_t>(b) << 8) | \
+   (static_cast<uint32_t>(c) << 16) | (static_cast<uint32_t>(d) << 24))
+
 
 #include "api/video_codecs/video_decoder.h"
 
@@ -75,6 +83,7 @@ public:
             RTC_LOG(LS_INFO) << "LiveVideoSource::onNewSession id:"<< id << " media:" << media << "/" << codec << " sdp:" << sdp;
 
             if ( (strcmp(codec, "H264") == 0)
+               || (strcmp(codec, "H265") == 0)
                || (strcmp(codec, "JPEG") == 0)
                || (strcmp(codec, "VP9") == 0) )
             {
@@ -106,7 +115,33 @@ public:
         int res = 0;
 
         std::string codec = m_codec[id];
-        if (codec == "H264")
+        if (codec == "H265")
+        {
+            std::vector<webrtc::H265::NaluIndex> indexes = webrtc::H265::FindNaluIndices(buffer,size);
+            RTC_LOG(LS_VERBOSE) << "LiveVideoSource:onData nbNalu:" << indexes.size();
+            for (const webrtc::H265::NaluIndex & index : indexes) {
+                webrtc::H265::NaluType nalu_type = webrtc::H265::ParseNaluType(buffer[index.payload_start_offset]);
+                if (nalu_type == webrtc::H265::NaluType::kSps)
+                {
+                    RTC_LOG(LS_VERBOSE) << "LiveVideoSource:onData SPS";
+                    absl::optional<webrtc::H265SpsParser::SpsState> sps = webrtc::H265SpsParser::ParseSps(buffer + index.payload_start_offset, index.payload_size);
+                    if (!sps)
+                    {
+                        RTC_LOG(LS_ERROR) << "cannot parse sps";
+                        res = -1;
+                    }
+                    else
+                    {
+                        int fps = 25;
+                        RTC_LOG(LS_INFO) << "LiveVideoSource:onData SPS set format " << sps->width << "x" << sps->height << " fps:" << fps;
+                        cricket::VideoFormat videoFormat(sps->width, sps->height, cricket::VideoFormat::FpsToInterval(fps), BUILD_FOURCC('H', '2', '6', '5'));
+                        m_decoder.postFormat(videoFormat);
+                    }
+
+		    }
+	    }
+
+	} else if (codec == "H264")
         {
             std::vector<webrtc::H264::NaluIndex> indexes = webrtc::H264::FindNaluIndices(buffer,size);
             RTC_LOG(LS_VERBOSE) << "LiveVideoSource:onData nbNalu:" << indexes.size();

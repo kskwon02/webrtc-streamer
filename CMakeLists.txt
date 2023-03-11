@@ -124,7 +124,7 @@ endif()
 
 
 FILE(GLOB_RECURSE WEBRTJSONCPPCOBJS ${WEBRTCOBJS}/third_party/jsoncpp/jsoncpp/*${CMAKE_C_OUTPUT_EXTENSION})
-FILE(GLOB_RECURSE WEBRTP2POBJ ${WEBRTCOBJS}/p2p/p2p_server_utils/*${CMAKE_C_OUTPUT_EXTENSION})
+FILE(GLOB_RECURSE WEBRTP2POBJ ${WEBRTCOBJS}/third_party/webrtc/p2p/p2p_server_utils/*${CMAKE_C_OUTPUT_EXTENSION})
 SET (WEBRTCEXTRAOBJS ${WEBRTJSONCPPCOBJS} ${WEBRTP2POBJ} ${WEBRTTASK})	
 
 # project target
@@ -133,9 +133,9 @@ add_executable (${CMAKE_PROJECT_NAME} ${SOURCE} ${WEBRTCEXTRAOBJS})
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE inc) 
 
 # webrtc 
-set (WEBRTCINCLUDE ${WEBRTCROOT}/src ${WEBRTCROOT}/src/third_party/abseil-cpp ${WEBRTCROOT}/src/third_party/jsoncpp/source/include  ${WEBRTCROOT}/src/third_party/jsoncpp/generated ${WEBRTCROOT}/src/third_party/libyuv/include)
+set (WEBRTCINCLUDE ${WEBRTCROOT}/src/third_party/webrtc ${WEBRTCROOT}/src/third_party/abseil-cpp ${WEBRTCROOT}/src/third_party/jsoncpp/source/include  ${WEBRTCROOT}/src/third_party/jsoncpp/generated ${WEBRTCROOT}/src/third_party/libyuv/include)
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE ${WEBRTCINCLUDE})
-target_link_libraries (${CMAKE_PROJECT_NAME} ${WEBRTCOBJS}/${CMAKE_STATIC_LIBRARY_PREFIX}webrtc${CMAKE_STATIC_LIBRARY_SUFFIX} ${WEBRTCOBJS}/rtc_base/${CMAKE_STATIC_LIBRARY_PREFIX}rtc_json${CMAKE_STATIC_LIBRARY_SUFFIX}) 
+target_link_libraries (${CMAKE_PROJECT_NAME} ${WEBRTCOBJS}/third_party/webrtc/${CMAKE_STATIC_LIBRARY_PREFIX}webrtc${CMAKE_STATIC_LIBRARY_SUFFIX} ${WEBRTCOBJS}/third_party/webrtc/rtc_base/${CMAKE_STATIC_LIBRARY_PREFIX}rtc_json${CMAKE_STATIC_LIBRARY_SUFFIX}) 
 add_definitions(-DHAVE_JPEG)
 
 # thread
@@ -200,7 +200,7 @@ else()
     target_link_libraries (${PROJECT_NAME} libv4l2cpp) 
 
     # webrtc
-    add_definitions(-DWEBRTC_POSIX -fno-rtti)
+    add_definitions(-DWEBRTC_POSIX -DWEBRTC_USE_H265 -fno-rtti)
     if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv6.*")
         add_definitions(-marm -march=armv6 -mfpu=vfp -mfloat-abi=hard)
     endif()
@@ -210,7 +210,7 @@ else()
     endif()
     # civetweb
     add_definitions(-DCRYPTO_LIB="libcrypto.so.1.1" -DSSL_LIB="libssl.so.1.1")
-    target_link_libraries (${CMAKE_PROJECT_NAME} dl)
+    target_link_libraries (${CMAKE_PROJECT_NAME} dl X11)
     #alsa
     if (ALSA_FOUND)
         add_definitions(-DHAVE_SOUND)
