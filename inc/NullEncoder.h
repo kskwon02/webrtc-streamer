@@ -50,12 +50,28 @@ class NullEncoder : public webrtc::VideoEncoder {
 		uint8_t* data = (uint8_t*)buffer->GetI420()->DataY();
 		size_t dataSize = buffer->GetI420()->StrideY();
 		webrtc::VideoFrameType frameType = webrtc::VideoFrameType::kVideoFrameDelta;
+		webrtc::CodecSpecificInfo codec_specific;
+		if (m_format.name == cricket::kH264CodecName) {
+			codec_specific.codecType = webrtc::VideoCodecType::kVideoCodecH264;
 		std::vector<webrtc::H264::NaluIndex> naluIndexes = webrtc::H264::FindNaluIndices(data, dataSize);
 		for (webrtc::H264::NaluIndex  index : naluIndexes) {
 			webrtc::H264::NaluType nalu_type = webrtc::H264::ParseNaluType(data[index.payload_start_offset]);
 			if (nalu_type ==  webrtc::H264::NaluType::kIdr) {
 				frameType = webrtc::VideoFrameType::kVideoFrameKey;
 				break;
+			}
+		}
+
+		} else if (m_format.name == cricket::kH265CodecName) {
+			codec_specific.codecType = webrtc::VideoCodecType::kVideoCodecH265;
+		std::vector<webrtc::H265::NaluIndex> naluIndexes = webrtc::H265::FindNaluIndices(data, dataSize);
+		for (webrtc::H265::NaluIndex  index : naluIndexes) {
+			webrtc::H265::NaluType nalu_type = webrtc::H265::ParseNaluType(data[index.payload_start_offset]);
+			if ( (nalu_type == webrtc::H265::NaluType::kIdrNLp) || (nalu_type == webrtc::H265::NaluType::kIdrWRadl)) {
+
+				frameType = webrtc::VideoFrameType::kVideoFrameKey;
+				break;
+			}
 			}
 		}
 
@@ -96,7 +112,7 @@ class NullEncoder : public webrtc::VideoEncoder {
 // Implementation of video encoder factory
 class VideoEncoderFactory : public webrtc::VideoEncoderFactory {
    public:
-    VideoEncoderFactory(): supported_formats_(webrtc::SupportedH264Codecs()) {}
+    VideoEncoderFactory(): supported_formats_({webrtc::SdpVideoFormat(cricket::kH264CodecName),webrtc::SdpVideoFormat(cricket::kH265CodecName)}) {}
     virtual ~VideoEncoderFactory() override {}
 
     std::unique_ptr<webrtc::VideoEncoder> CreateVideoEncoder(const webrtc::SdpVideoFormat& format) override {
